@@ -47,6 +47,9 @@ export default {
 
         window.addEventListener('resize', () => {
           setTimeout(this.positionItems(), 200)
+        })   
+        window.addEventListener('scroll', () => {
+          setTimeout(this.positionItems(), 200)
         })
       } else this.getReady()
     },
