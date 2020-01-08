@@ -3,160 +3,190 @@ export default {
   name: 'magic-grid',
 
   props: {
-    wrapper: {
-      type: String, // Required. Class or id of the container.
-      default: 'wrapper'
+    wrapper:     {
+      type:    String,
+      // Required. Class or id of the container.
+      default: 'wrapper',
     },
-    gap: {
-      type: Number, // Optional. Space between items. Default: 32px
-      default: 32
+    gap:         {
+      type:    Number,
+      // Optional. Space between items. Default: 32px
+      default: 32,
     },
-    maxCols: {
-      type: Number, // Maximum number of colums. Default: Infinite
-      default: 5
+    maxCols:     {
+      type:    Number,
+      // Maximum number of colums. Default: Infinite
+      default: 5,
     },
     maxColWidth: {
-      type: Number,
-      default: 280
+      type:    Number,
+      default: 280,
     },
-    animate: {
-      type: Boolean, // Animate item positioning. Default: false.
-      default: true
+    animate:     {
+      type:    Boolean,
+      // Animate item positioning. Default: false.
+      default: true,
     },
-    useMin: {
-      type: Boolean, // Place items in lower column
-      default: false
-    }
+    useMin:      {
+      type:    Boolean,
+      // Place items in lower column
+      default: false,
+    },
   },
 
   data () {
     return {
       started: false,
-      items: []
-    }
+      items:   [],
+    };
   },
 
   mounted () {
-    this.waitUntilReady()
+    this.waitUntilReady();
   },
 
   methods: {
     waitUntilReady () {
-      if (this.isReady()) {
-        this.positionItems()
+      if (this.isEverythingInitialized()) {
+        this.positionItems();
 
         window.addEventListener('resize', () => {
-          setTimeout(this.positionItems(), 200)
-        })   
+          setTimeout(() => {
+            this.positionItems();
+          }, 200);
+        });
         window.addEventListener('scroll', () => {
-          setTimeout(this.positionItems(), 200)
-        })
-      } else this.getReady()
+          setTimeout(() => {
+            this.positionItems();
+          }, 500);
+        });
+      }
+      else {
+        this.checkIfReady();
+      }
     },
 
-    isReady () {
-      return this.$el && this.items.length > 0
+    isEverythingInitialized () {
+      return this.$el && this.items.length > 0;
     },
 
-    getReady () {
-      let interval = setInterval(() => {
-        this.items = this.$el.children
+    checkIfReady () {
+      const interval = setInterval(() => {
+        this.items = this.$el.children;
 
-        if (this.isReady()) {
-          clearInterval(interval)
-          this.init()
+        if (this.isEverythingInitialized()) {
+          clearInterval(interval);
+          this.init();
         }
-      }, 100)
+      }, 100);
+    },
+
+    setElementCss (item, left = 0, top = 0) {
+      item.style.position = 'absolute';
+      item.style.maxWidth = this.maxColWidth + 'px';
+      item.style.left = left;
+      item.style.top = top;
+      if (this.animate) {
+        item.style.transition = 'top, left 0.2s ease';
+      }
     },
 
     init () {
-      if (!this.isReady() || this.started) return
+      if (!this.isEverythingInitialized() || this.started) {
+        return;
+      }
 
-      this.$el.style.position = 'relative'
+      this.$el.style.position = 'relative';
 
       Array.prototype.forEach.call(this.items, item => {
-        item.style.position = 'absolute'
-        item.style.maxWidth = this.maxColWidth + 'px'
-        if (this.animate) item.style.transition = 'top, left 0.2s ease'
-      })
+        this.setElementCss(item);
+      });
 
-      this.started = true
-      this.waitUntilReady()
+      this.started = true;
+      this.waitUntilReady();
     },
 
     colWidth () {
-      return this.items[0].getBoundingClientRect().width + this.gap
+      return this.items[0].getBoundingClientRect().width + this.gap;
     },
 
     setup () {
-      let width = this.$el.getBoundingClientRect().width
-      let numCols = Math.floor(width / this.colWidth()) || 1
-      let cols = []
+      const width = this.$el.getBoundingClientRect().width;
+      const cols = [];
+      let numCols = Math.floor(width / this.colWidth()) || 1;
 
       if (this.maxCols && numCols > this.maxCols) {
-        numCols = this.maxCols
+        numCols = this.maxCols;
       }
 
       for (let i = 0; i < numCols; i++) {
         cols[i] = {
           height: 0,
-          top: 0,
-          index: i
-        }
+          top:    0,
+          index:  i,
+        };
       }
 
-      let wSpace = width - numCols * this.colWidth() + this.gap
-
+      let wSpace = width - numCols * this.colWidth() + this.gap;
+      wSpace = Math.floor(wSpace / 2);
       return {
         cols,
-        wSpace
-      }
+        wSpace,
+      };
     },
 
+    // define next column where we going to insert element
     nextCol (cols, i) {
-      if (this.useMin) return this.getMin(cols)
+      if (this.useMin) {
+        return this.getShortestColumn(cols);
+      }
 
-      return cols[i % cols.length]
+      const columnIndex = i % cols.length;
+      return cols[columnIndex];
     },
 
     positionItems () {
-      let { cols, wSpace } = this.setup()
-
-      wSpace = Math.floor(wSpace / 2)
+      const setupCalculated = this.setup();
+      const cols = setupCalculated.cols;
+      const wSpace = setupCalculated.wSpace;
 
       Array.prototype.forEach.call(this.items, (item, i) => {
-        let min = this.nextCol(cols, i)
-        let left = min.index * this.colWidth() + wSpace
+        const min = this.nextCol(cols, i);
+        const left = min.index * this.colWidth() + wSpace;
 
-        item.style.left = left + 'px'
-        item.style.top = min.height + min.top + 'px'
+        const leftStr = left + 'px';
+        const topStr = min.height + min.top + 'px';
+        this.setElementCss(item, leftStr, topStr);
 
-        min.height += min.top + item.getBoundingClientRect().height
-        min.top = this.gap
-      })
+        min.height += min.top + item.getBoundingClientRect().height;
+        min.top = this.gap;
+      });
 
-      this.$el.style.height = this.getMax(cols).height + 'px'
+      this.$el.style.height = this.getHighestColumn(cols).height + 'px';
     },
 
-    getMax (cols) {
-      let max = cols[0]
+    getHighestColumn (cols) {
+      let max = cols[0];
 
-      for (let col of cols) {
-        if (col.height > max.height) max = col
+      for (const col of cols) {
+        if (col.height > max.height) {
+          max = col;
+        }
       }
 
-      return max
+      return max;
     },
 
-    getMin (cols) {
-      let min = cols[0]
+    getShortestColumn (cols) {
+      let min = cols[0];
 
-      for (let col of cols) {
-        if (col.height < min.height) min = col
+      for (const col of cols) {
+        if (col.height < min.height) {
+          min = col;
+        }
       }
 
-      return min
-    }
-  }
-
-}
+      return min;
+    },
+  },
+};
