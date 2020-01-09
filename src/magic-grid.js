@@ -41,6 +41,14 @@ export default {
     };
   },
 
+  watch: {
+    items (itemsModified) {
+      setTimeout(() => {
+        this.positionItems();
+      }, 3000);
+    },
+  },
+  
   mounted () {
     this.waitUntilReady();
   },
